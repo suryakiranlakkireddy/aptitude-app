@@ -1,5 +1,5 @@
 // Shared fetch wrapper for the admin panel. Talks to the same Spring Boot backend as the Flutter app.
-const API_BASE = window.localStorage.getItem('api_base') || 'http://localhost:8080/api';
+const API_BASE = window.localStorage.getItem('api_base') || 'https://aptitude-app-backend-n7vq.onrender.com/api';
 
 async function apiRequest(path, { method = 'GET', body } = {}) {
   const headers = { 'Content-Type': 'application/json' };
