@@ -10,7 +10,8 @@ public class RegisterRequest {
     @NotBlank
     private String fullName;
 
-    @Email @NotBlank
+    @Email(regexp = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+    @NotBlank
     private String email;
 
     @Size(min = 6)
