@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard - Admin</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="topics.html">Topics</a>
+    <a href="quizzes.html">Quizzes</a>
+    <a href="users.html">Users</a>
+    <a href="#" onclick="logoutAdmin()">Log out</a>
+  </nav>
+  <div class="container wide">
+    <h1>Dashboard</h1>
+    <h2>Overview of app activity</h2>
+    <div class="stats" id="stats"></div>
+  </div>
+  <script src="js/api.js"></script>
+  <script>
+    requireAdmin();
+    (async () => {
+      const data = await apiRequest('/admin/analytics');
+      document.getElementById('stats').innerHTML = `
+        <div class="stat-card"><div class="num">${data.totalUsers}</div>Total Users</div>
+        <div class="stat-card"><div class="num">${data.activeSubscriptions}</div>Active Subscriptions</div>
+      `;
+    })();
+  </script>
+</body>
+</html>

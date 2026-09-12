@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Topics - Admin</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="topics.html">Topics</a>
+    <a href="quizzes.html">Quizzes</a>
+    <a href="users.html">Users</a>
+    <a href="#" onclick="logoutAdmin()">Log out</a>
+  </nav>
+  <div class="container wide">
+    <h1>Topics</h1>
+    <h2>Manage aptitude topics (Quant, Reasoning, Verbal, DI, GK, Computer Basics...)</h2>
+    <div class="card">
+      <div class="row">
+        <input id="name" placeholder="Topic name e.g. Quantitative Aptitude">
+        <input id="category" placeholder="Category: GOVT / IT / BOTH">
+      </div>
+      <textarea id="description" placeholder="Short description"></textarea>
+      <button onclick="createTopic()">Add Topic</button>
+    </div>
+    <table id="table">
+      <thead><tr><th>Name</th><th>Category</th><th>Description</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <script src="js/api.js"></script>
+  <script>
+    requireAdmin();
+
+    async function loadTopics() {
+      const topics = await apiRequest('/admin/topics');
+      const tbody = document.querySelector('#table tbody');
+      tbody.innerHTML = topics.map(t => `
+        <tr>
+          <td>${t.name}</td>
+          <td>${t.category || ''}</td>
+          <td>${t.description || ''}</td>
+          <td><button class="danger" onclick="deleteTopic(${t.id})">Delete</button></td>
+        </tr>
+      `).join('');
+    }
+
+    async function createTopic() {
+      await apiRequest('/admin/topics', {
+        method: 'POST',
+        body: {
+          name: document.getElementById('name').value,
+          category: document.getElementById('category').value || 'BOTH',
+          description: document.getElementById('description').value,
+        },
+      });
+      document.getElementById('name').value = '';
+      document.getElementById('description').value = '';
+      loadTopics();
+    }
+
+    async function deleteTopic(id) {
+      if (!confirm('Delete this topic?')) return;
+      await apiRequest(`/admin/topics/${id}`, { method: 'DELETE' });
+      loadTopics();
+    }
+
+    loadTopics();
+  </script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Quizzes - Admin</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="topics.html">Topics</a>
+    <a href="quizzes.html">Quizzes</a>
+    <a href="users.html">Users</a>
+    <a href="#" onclick="logoutAdmin()">Log out</a>
+  </nav>
+  <div class="container wide">
+    <h1>Quizzes</h1>
+    <h2>Create quizzes/mock tests and attach questions</h2>
+
+    <div class="card">
+      <div class="row">
+        <select id="topicId"></select>
+        <input id="title" placeholder="Quiz title">
+      </div>
+      <div class="row">
+        <input id="duration" type="number" placeholder="Duration (minutes)" value="20">
+        <select id="mockTest"><option value="false">Regular quiz</option><option value="true">Mock test</option></select>
+      </div>
+      <textarea id="description" placeholder="Description"></textarea>
+      <button onclick="createQuiz()">Create Quiz</button>
+    </div>
+
+    <table id="table">
+      <thead><tr><th>Title</th><th>Duration</th><th>Type</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+
+    <h2 style="margin-top:32px">Add Question to a Quiz</h2>
+    <div class="card">
+      <select id="quizIdForQuestion"></select>
+      <textarea id="questionText" placeholder="Question text"></textarea>
+      <div class="row"><input id="opt1" placeholder="Option 1"><input id="opt2" placeholder="Option 2"></div>
+      <div class="row"><input id="opt3" placeholder="Option 3"><input id="opt4" placeholder="Option 4"></div>
+      <select id="correctOption">
+        <option value="0">Correct: Option 1</option>
+        <option value="1">Correct: Option 2</option>
+        <option value="2">Correct: Option 3</option>
+        <option value="3">Correct: Option 4</option>
+      </select>
+      <button onclick="addQuestion()">Add Question</button>
+    </div>
+  </div>
+  <script src="js/api.js"></script>
+  <script>
+    requireAdmin();
+    let topics = [];
+    let quizzes = [];
+
+    async function loadTopics() {
+      topics = await apiRequest('/admin/topics');
+      const opts = topics.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+      document.getElementById('topicId').innerHTML = opts;
+    }
+
+    async function loadQuizzes() {
+      quizzes = await apiRequest('/admin/quizzes');
+      document.querySelector('#table tbody').innerHTML = quizzes.map(q => `
+        <tr>
+          <td>${q.title}</td>
+          <td>${q.durationMinutes} min</td>
+          <td>${q.mockTest ? 'Mock test' : 'Quiz'}</td>
+          <td><button class="danger" onclick="deleteQuiz(${q.id})">Delete</button></td>
+        </tr>
+      `).join('');
+      document.getElementById('quizIdForQuestion').innerHTML =
+        quizzes.map(q => `<option value="${q.id}">${q.title}</option>`).join('');
+    }
+
+    async function createQuiz() {
+      const topicId = document.getElementById('topicId').value;
+      await apiRequest(`/admin/quizzes?topicId=${topicId}`, {
+        method: 'POST',
+        body: {
+          title: document.getElementById('title').value,
+          description: document.getElementById('description').value,
+          durationMinutes: parseInt(document.getElementById('duration').value || '20'),
+          mockTest: document.getElementById('mockTest').value === 'true',
+        },
+      });
+      document.getElementById('title').value = '';
+      document.getElementById('description').value = '';
+      loadQuizzes();
+    }
+
+    async function deleteQuiz(id) {
+      if (!confirm('Delete this quiz and all its questions?')) return;
+      await apiRequest(`/admin/quizzes/${id}`, { method: 'DELETE' });
+      loadQuizzes();
+    }
+
+    async function addQuestion() {
+      const quizId = document.getElementById('quizIdForQuestion').value;
+      const optionTexts = [
+        document.getElementById('opt1').value,
+        document.getElementById('opt2').value,
+        document.getElementById('opt3').value,
+        document.getElementById('opt4').value,
+      ];
+      const correctIndex = parseInt(document.getElementById('correctOption').value);
+      await apiRequest(`/admin/quizzes/${quizId}/questions`, {
+        method: 'POST',
+        body: {
+          questionText: document.getElementById('questionText').value,
+          options: optionTexts.map((text, i) => ({ optionText: text, correct: i === correctIndex })),
+        },
+      });
+      document.getElementById('questionText').value = '';
+      ['opt1','opt2','opt3','opt4'].forEach(id => document.getElementById(id).value = '');
+      alert('Question added');
+    }
+
+    (async () => { await loadTopics(); await loadQuizzes(); })();
+  </script>
+</body>
+</html>
