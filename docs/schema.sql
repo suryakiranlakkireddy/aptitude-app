@@ -103,7 +103,18 @@ CREATE TABLE IF NOT EXISTS notes (
     id BIGSERIAL PRIMARY KEY,
     topic_id BIGINT NOT NULL REFERENCES topics(id),
     title VARCHAR(255),
-    file_url TEXT NOT NULL,      -- Supabase Storage URL (PDF)
-    thumbnail_url TEXT,          -- Supabase Storage URL
+    file_url TEXT NOT NULL,      -- Supabase Storage OBJECT PATH (not a public URL) - signed on read
+    thumbnail_url TEXT,          -- Supabase Storage OBJECT PATH (optional) - signed on read
     uploaded_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- FCM registration tokens for push notifications. A token can get reassigned to a
+-- different user (logout + different login on the same device) - see
+-- NotificationController#register, which repoints rather than duplicating.
+CREATE TABLE IF NOT EXISTS device_tokens (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id),
+    token TEXT NOT NULL UNIQUE,
+    platform VARCHAR(20),        -- ANDROID | IOS | WEB
+    created_at TIMESTAMP NOT NULL DEFAULT now()
 );

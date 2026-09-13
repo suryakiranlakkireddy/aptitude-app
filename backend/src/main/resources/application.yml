@@ -29,3 +29,5 @@ app:
     url: ${SUPABASE_URL:}
     service-key: ${SUPABASE_SERVICE_KEY:}
     bucket: ${SUPABASE_BUCKET:aptitude-app-files}
+  firebase:
+    service-account-json: ${FIREBASE_SERVICE_ACCOUNT_JSON:}

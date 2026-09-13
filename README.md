@@ -47,12 +47,21 @@ aptitude-app/
   Supabase Storage using the service role key. `GET /api/notes?topicId=` and
   `GET /api/admin/notes?topicId=` never return a stored public URL - they generate a
   fresh, 1-hour signed URL on every request, so files aren't permanently link-shareable.
+- Push notifications (FCM): `POST /api/notifications/register` stores a device's FCM
+  token against the logged-in user, `DELETE /api/notifications/token` removes it on
+  logout, and a daily job (`NotificationService#sendStreakReminders`, 8 PM server time)
+  pushes a reminder to anyone with an active streak who hasn't practiced yet today.
+  `POST /api/notifications/test` sends a one-off push to your own devices to verify
+  the setup. Tokens FCM reports as no longer valid are deleted automatically.
+  **Caveat:** this is backend infrastructure only - nothing calls `/register` yet
+  because the Flutter app doesn't exist, so no push has actually been delivered
+  end-to-end. Wiring `firebase_messaging` into the Flutter app is still open.
 
 ## Not yet wired up (marked as TODO in code)
 
 - Real payment gateway (Razorpay/UPI) integration - currently `/api/subscription/purchase` records payment as successful directly
-- Push notifications / streak reminders
-- Flutter mobile app UI (`frontend/` currently only has `pubspec.yaml` - the screens haven't been built yet)
+- Flutter mobile app UI (`frontend/` currently only has `pubspec.yaml` - the screens haven't been built yet,
+  which is also why push notifications haven't been end-to-end tested on a real device)
 
 ## Running the backend
 
@@ -67,6 +76,9 @@ export JWT_SECRET=some-long-random-string
 export SUPABASE_URL=https://<project-ref>.supabase.co
 export SUPABASE_SERVICE_KEY=<service_role key, NOT the anon key - dashboard > Project Settings > API>
 export SUPABASE_BUCKET=aptitude-app-files
+# needed for push notifications (device registration + streak reminders)
+# paste the FULL JSON contents of a Firebase service account key file as one value
+export FIREBASE_SERVICE_ACCOUNT_JSON='{"type":"service_account","project_id":"...","private_key":"...","client_email":"...","token_uri":"https://oauth2.googleapis.com/token", ...}'
 ./mvnw spring-boot:run
 ```
 API will be available at `http://localhost:8080/api`.
