@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Notes - Admin</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="topics.html">Topics</a>
+    <a href="quizzes.html">Quizzes</a>
+    <a href="notes.html">Notes</a>
+    <a href="users.html">Users</a>
+    <a href="#" onclick="logoutAdmin()">Log out</a>
+  </nav>
+  <div class="container wide">
+    <h1>Notes</h1>
+    <h2>Upload PDF study notes (with an optional thumbnail) to Supabase Storage</h2>
+
+    <div class="card">
+      <div class="row">
+        <select id="topicId"></select>
+        <input id="title" placeholder="Note title e.g. Percentages - Formula Sheet">
+      </div>
+      <div class="row">
+        <div>
+          <label style="font-size:12px;color:#4a5568">PDF file</label>
+          <input id="file" type="file" accept="application/pdf">
+        </div>
+        <div>
+          <label style="font-size:12px;color:#4a5568">Thumbnail (optional)</label>
+          <input id="thumbnail" type="file" accept="image/*">
+        </div>
+      </div>
+      <button onclick="uploadNote()">Upload Note</button>
+      <div id="status" style="font-size:13px;margin-top:8px;"></div>
+    </div>
+
+    <table id="table">
+      <thead><tr><th>Title</th><th>Uploaded</th><th>File</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <script src="js/api.js"></script>
+  <script>
+    requireAdmin();
+    let topics = [];
+
+    async function loadTopics() {
+      topics = await apiRequest('/admin/topics');
+      document.getElementById('topicId').innerHTML =
+        topics.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+      if (topics.length) loadNotes();
+    }
+
+    async function loadNotes() {
+      const topicId = document.getElementById('topicId').value;
+      if (!topicId) return;
+      const notes = await apiRequest(`/admin/notes?topicId=${topicId}`);
+      document.querySelector('#table tbody').innerHTML = notes.map(n => `
+        <tr>
+          <td>${n.title}</td>
+          <td>${(n.uploadedAt || '').split('T')[0]}</td>
+          <td><a href="${n.fileUrl}" target="_blank">Open (link expires in 1hr)</a></td>
+          <td><button class="danger" onclick="deleteNote(${n.id})">Delete</button></td>
+        </tr>
+      `).join('');
+    }
+
+    async function uploadNote() {
+      const statusEl = document.getElementById('status');
+      const topicId = document.getElementById('topicId').value;
+      const title = document.getElementById('title').value;
+      const file = document.getElementById('file').files[0];
+      const thumbnail = document.getElementById('thumbnail').files[0];
+
+      if (!topicId || !title || !file) {
+        statusEl.textContent = 'Pick a topic, a title, and a PDF file.';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('topicId', topicId);
+      formData.append('title', title);
+      formData.append('file', file);
+      if (thumbnail) formData.append('thumbnail', thumbnail);
+
+      statusEl.textContent = 'Uploading...';
+      try {
+        const token = localStorage.getItem('admin_token');
+        const res = await fetch(`${API_BASE}/admin/notes`, {
+          method: 'POST',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          body: formData,
+        });
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem('admin_token');
+          window.location.href = 'index.html';
+          return;
+        }
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || 'Upload failed');
+        }
+        statusEl.textContent = 'Uploaded.';
+        document.getElementById('title').value = '';
+        document.getElementById('file').value = '';
+        document.getElementById('thumbnail').value = '';
+        loadNotes();
+      } catch (e) {
+        statusEl.textContent = e.message;
+      }
+    }
+
+    async function deleteNote(id) {
+      if (!confirm('Delete this note?')) return;
+      await apiRequest(`/admin/notes/${id}`, { method: 'DELETE' });
+      loadNotes();
+    }
+
+    document.getElementById('topicId').addEventListener('change', loadNotes);
+    loadTopics();
+  </script>
+</body>
+</html>

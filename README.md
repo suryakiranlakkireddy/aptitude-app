@@ -41,14 +41,18 @@ aptitude-app/
 - Quiz attempt submission with automatic scoring
 - Per-student, isolated progress tracking (topic-wise accuracy, attempts, streaks)
 - Subscription model: Rs 59 for 4 months, auto-expiry, renewal endpoint
-- Admin panel: manage topics, quizzes, questions; view users and dashboard stats
-- Notes model ready for Supabase-hosted PDFs
+- Admin panel: manage topics, quizzes, questions, notes; view users and dashboard stats
+- Real Supabase Storage upload flow for notes: admin uploads a PDF (+ optional thumbnail)
+  via `POST /api/admin/notes` (multipart, ADMIN only), which is proxied server-side to
+  Supabase Storage using the service role key. `GET /api/notes?topicId=` and
+  `GET /api/admin/notes?topicId=` never return a stored public URL - they generate a
+  fresh, 1-hour signed URL on every request, so files aren't permanently link-shareable.
 
 ## Not yet wired up (marked as TODO in code)
 
 - Real payment gateway (Razorpay/UPI) integration - currently `/api/subscription/purchase` records payment as successful directly
-- Actual Supabase Storage upload flow (client uploads + signed URLs)
 - Push notifications / streak reminders
+- Flutter mobile app UI (`frontend/` currently only has `pubspec.yaml` - the screens haven't been built yet)
 
 ## Running the backend
 
@@ -59,9 +63,17 @@ export DB_URL=jdbc:postgresql://localhost:5432/aptitude_app
 export DB_USERNAME=postgres
 export DB_PASSWORD=postgres
 export JWT_SECRET=some-long-random-string
+# needed for notes upload/download (Supabase Storage REST API)
+export SUPABASE_URL=https://<project-ref>.supabase.co
+export SUPABASE_SERVICE_KEY=<service_role key, NOT the anon key - dashboard > Project Settings > API>
+export SUPABASE_BUCKET=aptitude-app-files
 ./mvnw spring-boot:run
 ```
 API will be available at `http://localhost:8080/api`.
+
+The `aptitude-app-files` bucket must exist as a **private** bucket in Supabase Storage
+before notes can be uploaded (the backend never creates buckets, only objects inside
+one). On the deployed environment this bucket has already been created.
 
 To make the first admin account: register normally via `/api/auth/register`, then in Postgres run:
 ```sql

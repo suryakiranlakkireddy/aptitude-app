@@ -19,9 +19,9 @@ public class Note {
     private String title;
 
     @Column(nullable = false)
-    private String fileUrl; // Supabase Storage URL (PDF)
+    private String fileUrl; // Supabase Storage OBJECT PATH (not a public URL)
 
-    private String thumbnailUrl;
+    private String thumbnailUrl; // Supabase Storage OBJECT PATH (optional)
 
     private LocalDateTime uploadedAt = LocalDateTime.now();
 }

@@ -1,9 +1,9 @@
 package com.aptitudeapp.controller;
 
+import com.aptitudeapp.dto.NoteDto;
 import com.aptitudeapp.entity.Note;
-import com.aptitudeapp.entity.Topic;
 import com.aptitudeapp.repository.NoteRepository;
-import com.aptitudeapp.repository.TopicRepository;
+import com.aptitudeapp.service.SupabaseStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,20 +14,24 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NoteController {
 
+    private static final int SIGNED_URL_TTL_SECONDS = 60 * 60;
+
     private final NoteRepository noteRepository;
-    private final TopicRepository topicRepository;
+    private final SupabaseStorageService storageService;
 
     @GetMapping
-    public List<Note> list(@RequestParam Long topicId) {
-        return noteRepository.findByTopicId(topicId);
+    public List<NoteDto> list(@RequestParam Long topicId) {
+        return noteRepository.findByTopicId(topicId).stream()
+                .map(this::toDto)
+                .toList();
     }
 
-    // fileUrl / thumbnailUrl are expected to already point to Supabase Storage
-    // (upload happens client-side or via a separate signed-URL endpoint - TODO).
-    @PostMapping("/admin")
-    public Note create(@RequestBody Note note, @RequestParam Long topicId) {
-        Topic topic = topicRepository.findById(topicId).orElseThrow();
-        note.setTopic(topic);
-        return noteRepository.save(note);
+    private NoteDto toDto(Note note) {
+        String signedFileUrl = storageService.createSignedUrl(note.getFileUrl(), SIGNED_URL_TTL_SECONDS);
+        String signedThumbUrl = note.getThumbnailUrl() != null
+                ? storageService.createSignedUrl(note.getThumbnailUrl(), SIGNED_URL_TTL_SECONDS)
+                : null;
+        return new NoteDto(note.getId(), note.getTopic().getId(), note.getTitle(),
+                signedFileUrl, signedThumbUrl, note.getUploadedAt());
     }
 }
